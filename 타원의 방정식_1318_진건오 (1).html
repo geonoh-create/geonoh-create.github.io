@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타원의 신비: 원에서 우주까지</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <!-- Chosen Palette: Scholarly Neutrals (Beige, Slate, Teal Accent) -->
+    <!-- Application Structure Plan: A narrative, single-page scrolling application guiding a student through the concept of an ellipse. The structure is a logical learning path: 1. Title/Author, 2. Circle Review (familiar starting point), 3. Intuitive Introduction (morphing from circle to ellipse), 4. Formal Ellipse Definition, 5. Step-by-step Equation Derivation, 6. Interactive Ellipse Explorer (with explicit eccentricity control), and 7. Real-world Applications. This structure is designed to bridge the gap from the familiar circle to the complex ellipse, allowing for a deep, intuitive understanding of the core concepts, and is enhanced with an explicit eccentricity control to directly link the two shapes. -->
+    <!-- Visualization & Content Choices: Report Info: Circle basics -> Goal: Re-establish familiar concept -> Viz: Simple HTML/CSS-based circle with a radius slider -> Interaction: Adjust circle size in real-time -> Justification: Provides a smooth entry point, grounding the presentation in prior knowledge. | Report Info: Ellipse Equation Derivation -> Goal: Show logical progression -> Viz: Numbered, card-based layout using HTML/CSS for step-by-step breakdown. Mathematical formulas rendered with KaTeX for clarity. -> Interaction: None, focused on clear, static explanation -> Justification: Breaks down a complex algebraic process into digestible steps, which is crucial for a live presentation. | Report Info: Equation parameters a, b, eccentricity -> Goal: Explore relationships & link to circles -> Viz: Chart.js scatter plot with explicit a, b, and a new eccentricity slider -> Interaction: Real-time chart updates based on slider values -> Justification: Provides a hands-on 'playground' that visually demonstrates the key conceptual link between a circle (eccentricity=0) and an ellipse. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fdfaf6;
+            color: #334155;
+        }
+        .section-title {
+            color: #0d9488;
+        }
+        .accent-bg {
+            background-color: #ccfbf1;
+        }
+        .accent-text {
+            color: #115e59;
+        }
+        .interactive-card {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .interactive-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #0d9488;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .slider-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #d1fae5;
+            border-radius: 9999px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #0d9488;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -6px;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #0d9488;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+        .nav-link {
+            transition: color 0.2s;
+        }
+        .nav-link:hover {
+            color: #0d9488;
+        }
+        .katex-display {
+            margin: 0.5em 0;
+            font-size: 1.1em;
+        }
+        .step-number {
+            background-color: #0d9488;
+            color: white;
+            border-radius: 9999px;
+            width: 2rem;
+            height: 2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-700">타원의 신비 탐구</h1>
+            <div class="hidden md:flex space-x-6 text-slate-600 font-medium">
+                <a href="#circle-review" class="nav-link">원의 방정식</a>
+                <a href="#intro" class="nav-link">도입</a>
+                <a href="#definition" class="nav-link">정의</a>
+                <a href="#derivation" class="nav-link">유도 과정</a>
+                <a href="#explorer" class="nav-link">탐구</a>
+                <a href="#applications" class="nav-link">활용</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden px-6 pt-2 pb-4 space-y-2">
+            <a href="#circle-review" class="block nav-link">원의 방정식</a>
+            <a href="#intro" class="block nav-link">도입</a>
+            <a href="#definition" class="block nav-link">정의</a>
+            <a href="#derivation" class="block nav-link">유도 과정</a>
+            <a href="#explorer" class="block nav-link">탐구</a>
+            <a href="#applications" class="block nav-link">활용</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <section class="text-center mb-16 md:mb-24">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-teal-700 mb-4">타원의 신비</h1>
+            <p class="text-lg md:text-xl font-medium text-slate-600">수학 발표 - 1318 진건오</p>
+        </section>
+
+        <section id="circle-review" class="text-center mb-16 md:mb-24 scroll-mt-20">
+            <h2 class="section-title text-2xl md:text-3xl font-bold mb-4">원의 방정식 복습: 익숙한 개념에서 출발</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-lg">우리는 원을 '한 점(중심)에서 같은 거리에 있는 점들의 모임'으로 배웠습니다. 이 정의를 식으로 나타내면 다음과 같습니다.</p>
+            <div class="my-6 p-4 accent-bg rounded-lg inline-block">
+                <p class="font-bold accent-text">원의 방정식: <span class="katex-inline" data-katex="x^2 + y^2 = r^2"></span></p>
+            </div>
+            <div class="mt-8 flex flex-col items-center">
+                <div id="circle-visual" class="w-24 h-24 bg-teal-400 rounded-full transition-all duration-300"></div>
+                <div class="mt-4 w-full max-w-sm">
+                    <label for="circle-radius-slider" class="font-medium text-slate-700">반지름 (r): <span id="circle-radius-label" class="font-bold text-teal-700">60px</span></label>
+                    <input id="circle-radius-slider" type="range" min="30" max="100" value="60" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-track">
+                </div>
+            </div>
+            <p class="mt-4 text-slate-500">반지름을 조절하며 원의 크기를 느껴보세요.</p>
+        </section>
+
+        <section id="intro" class="text-center mb-16 md:mb-24 scroll-mt-20">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">원의 중심이 두 개로 나뉜다면?</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-lg">익숙한 원의 정의에서 기준이 되는 점이 **두 개**가 된다면, 어떤 도형이 탄생할까요?</p>
+            <div class="mt-8 flex justify-center items-center h-48">
+                <div id="shape-morph" class="w-40 h-40 bg-teal-400 rounded-full transition-all duration-1000 ease-in-out"></div>
+            </div>
+            <p class="mt-4 text-slate-500">바로 '타원'의 세계가 펼쳐집니다. 원이 납작하게 변형되며 타원이 되는 모습을 확인해 보세요.</p>
+        </section>
+
+        <section id="definition" class="mb-16 md:mb-24 scroll-mt-20">
+            <h2 class="section-title text-2xl md:text-3xl font-bold text-center mb-8">타원의 정의: 두 점으로부터의 약속</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="prose max-w-none text-slate-700">
+                    <p>타원은 평면 위의 **두 고정된 점(초점)**으로부터 **거리의 합이 일정한** 점들의 집합입니다. 이 두 초점은 타원의 가장 중요한 특징을 결정합니다.</p>
+                    <p>초점과 초점을 잇는 직선은 타원의 가장 긴 지름인 **장축**을 형성하며, 이 장축의 길이는 타원 위의 어떤 점이든 두 초점으로부터의 거리의 합과 같습니다.  마치 두 개의 기둥에 길이가 일정한 끈을 묶고, 펜으로 끈을 팽팽하게 유지하며 그릴 때 그려지는 도형과 같습니다.</p>
+                    <div class="mt-6 p-4 accent-bg rounded-lg">
+                        <p class="font-bold accent-text">핵심 정의: <span class="katex-inline" data-katex="PF + PF' = 2a"></span></p>
+                        <p class="text-sm accent-text mt-1">여기서 P는 타원 위의 한 점, F와 F'는 두 초점, 2a는 거리의 합(장축의 길이)을 의미합니다.</p>
+                    </div>
+                </div>
+                <div class="interactive-card p-4">
+                    <canvas id="ellipse-definition-canvas"></canvas>
+                    <p class="text-center text-sm text-slate-500 mt-2">애니메이션: 거리의 합이 일정하게 유지되는 모습</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="derivation" class="mb-16 md:mb-24 scroll-mt-20">
+            <h2 class="section-title text-2xl md:text-3xl font-bold text-center mb-4">방정식 유도 과정: 정의에서 식으로</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-center mb-8">타원의 기하학적 정의를 어떻게 아름다운 대수 방정식으로 바꿀 수 있을까요? **특히 원의 방정식과 타원의 방정식이 어떻게 연결되는지**에 초점을 맞춰 따라가 봅시다.</p>
+            <div class="space-y-6">
+                <div class="interactive-card p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number">1</div>
+                        <div>
+                            <h3 class="font-bold text-lg">좌표 설정</h3>
+                            <p class="text-slate-600">타원의 중심을 원점으로 놓고, 두 초점을 x축 위에 설정합니다. 타원 위의 임의의 점을 $P(x,y)$라고 둡니다.</p>
+                            <div class="mt-2 text-left" data-katex-display="F(c, 0), \quad F'(-c, 0), \quad P(x, y)"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="interactive-card p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number">2</div>
+                        <div>
+                            <h3 class="font-bold text-lg">정의에 따른 식 세우기</h3>
+                            <p class="text-slate-600">타원의 정의, 즉 두 초점에서 거리의 합이 일정하다는 원리($PF + PF' = 2a$)를 점과 점 사이의 거리 공식으로 표현합니다.</p>
+                            <div class="mt-2 text-left" data-katex-display="\sqrt{(x-c)^2 + y^2} + \sqrt{(x+c)^2 + y^2} = 2a"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="interactive-card p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number">3</div>
+                        <div>
+                            <h3 class="font-bold text-lg">복잡한 식 정리</h3>
+                            <p class="text-slate-600">위 식을 정리하여 근호를 없애면 아래와 같은 깔끔한 형태로 정리됩니다. 여기서 **$a$는 장반경, $c$는 초점까지의 거리**를 의미합니다.</p>
+                            <div class="mt-2 text-left" data-katex-display="(a^2 - c^2)x^2 + a^2y^2 = a^2(a^2 - c^2)"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="interactive-card p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number">4</div>
+                        <div>
+                            <h3 class="font-bold text-lg">원의 방정식과 타원의 연결</h3>
+                            <p class="text-slate-600">
+                                원의 방정식 $x^2 + y^2 = r^2$을 분수 형태로 표현하면 
+                                <span class="katex-inline" data-katex="\frac{x^2}{r^2} + \frac{y^2}{r^2} = 1"></span> 입니다.
+                                이는 x와 y축 방향의 반지름이 모두 $r$로 같다는 것을 의미합니다.
+                                만약 이 두 반지름이 서로 다른 값($a, b$)을 가지게 된다면 어떨까요?
+                            </p>
+                            <div class="mt-2 text-left flex flex-col items-center">
+                                <p class="text-slate-600">
+                                    원의 방정식에서 $r$ 대신 $a$와 $b$를 대입하면,
+                                </p>
+                                <div class="mt-2" data-katex-display="\frac{x^2}{r^2} + \frac{y^2}{r^2} = 1 \quad \rightarrow \quad \frac{x^2}{a^2} + \frac{y^2}{b^2} = 1"></div>
+                            </div>
+                            <p class="text-slate-600 mt-2">
+                                이 최종 식은 앞에서 복잡하게 정리했던 $a^2 - c^2$을 $b^2$으로 치환하여 유도한 식과 일치합니다.
+                                ($b^2 = a^2 - c^2$)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="interactive-card p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number">5</div>
+                        <div>
+                            <h3 class="font-bold text-lg">최종 방정식</h3>
+                            <p class="text-slate-600">이제 우리는 타원의 표준 방정식을 얻었습니다.</p>
+                            <div class="mt-2 text-left accent-bg p-2 rounded-md inline-block" data-katex-display="\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="explorer" class="mb-16 md:mb-24 scroll-mt-20">
+            <h2 class="section-title text-2xl md:text-3xl font-bold text-center mb-4">인터랙티브 타원 탐구</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-center mb-8">타원의 모양을 결정하는 중요한 요소들을 조작하며, 원과의 관계를 직접 확인해 보세요.</p>
+            <div class="interactive-card p-4 md:p-8">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="md:col-span-1 space-y-6">
+                        <p class="text-slate-600 text-sm">
+                            **장반경(a)**은 타원의 긴 축인 장축의 절반 길이, **단반경(b)**은 짧은 축인 단축의 절반 길이입니다. **이심률(e)**은 타원이 얼마나 납작한지를 나타내는 값입니다.
+                        </p>
+                        <div>
+                            <label for="slider-e" class="font-medium">이심률 (e): <span id="label-e" class="font-bold text-teal-700">0.80</span></label>
+                            <input id="slider-e" type="range" min="0" max="0.99" value="0.80" step="0.01" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-track">
+                            <p class="text-sm text-slate-500 mt-1">이심률이 0일 때는 원, 1에 가까울수록 납작해집니다. </p>
+                        </div>
+                        <div>
+                            <label for="slider-a" class="font-medium">장반경 (a): <span id="label-a" class="font-bold text-teal-700">5.00</span></label>
+                            <input id="slider-a" type="range" min="1" max="10" value="5" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-track">
+                        </div>
+                        <div>
+                            <label for="slider-b" class="font-medium">단반경 (b): <span id="label-b" class="font-bold text-teal-700">3.00</span></label>
+                            <input id="slider-b" type="range" min="1" max="10" value="3" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-track">
+                        </div>
+                        <div class="accent-bg rounded-lg p-4 space-y-2">
+                            <h4 class="font-bold accent-text">계산된 값</h4>
+                            <p class="text-sm accent-text">초점 거리 (c): <span id="value-c" class="font-mono font-bold">4.00</span></p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <div class="chart-container">
+                            <canvas id="ellipse-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="applications" class="scroll-mt-20">
+            <h2 class="section-title text-2xl md:text-3xl font-bold text-center mb-8">우리 삶 속의 타원</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-center mb-12">타원의 아름다운 원리는 단순히 수학 개념을 넘어, 우리 삶의 다양한 분야에 깊숙이 스며들어 있습니다.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="interactive-card p-6 text-center">
+                    <div class="text-4xl mb-4">🪐</div>
+                    <h3 class="text-lg font-bold mb-2">행성의 공전 궤도</h3>
+                    <p class="text-slate-600 text-sm">천문학자 케플러는 모든 행성이 태양을 하나의 초점으로 하는 타원 궤도를 따라 공전한다는 사실을 발견했습니다. 이는 행성이 태양에 가까울 때는 더 빠르게, 멀 때는 더 느리게 움직이는 이유를 설명해 줍니다.  타원 궤도는 우주의 질서와 역동성을 이해하는 데 필수적인 개념입니다.</p>
+                </div>
+                <div class="interactive-card p-6 text-center">
+                     <div class="text-4xl mb-4">🗣️</div>
+                    <h3 class="text-lg font-bold mb-2">속삭이는 회랑 (Whispering Gallery)</h3>
+                    <p class="text-slate-600 text-sm">타원의 가장 흥미로운 성질 중 하나는 '반사 성질'입니다. 한 초점에서 발생한 소리나 빛은 타원 벽에 반사되어 다른 초점으로 모입니다.  미국 의회의 국회의사당 건물이나 영국 런던의 세인트폴 대성당 같은 타원형 건축물에서 실제로 경험할 수 있으며, 이 원리를 이용해 한쪽 끝에서 속삭여도 반대쪽 끝에서 명확하게 들을 수 있습니다.</p>
+                </div>
+                <div class="interactive-card p-6 text-center">
+                     <div class="text-4xl mb-4">🩺</div>
+                    <h3 class="text-lg font-bold mb-2">의료 기기</h3>
+                    <p class="text-slate-600 text-sm">타원의 반사 원리는 의료 분야에서도 혁신적인 역할을 합니다.  **체외 충격파 쇄석기(ESWL)**가 대표적인 예입니다. 이 기기는 환자 몸 밖에 있는 한 초점에서 충격파를 발생시키고, 이 충격파가 타원 모양의 기기 벽에 반사되어 다른 초점에 위치한 환자의 신장 결석에 정확히 집중됩니다. 이로써 피부나 다른 장기에 손상을 주지 않고 결석만 파괴할 수 있습니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="text-center py-8 mt-12 border-t">
+        <p class="text-slate-500">수학적 탐구를 통한 세상의 이해</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            function renderMath() {
+                document.querySelectorAll('[data-katex]').forEach(elem => {
+                    katex.render(elem.getAttribute('data-katex'), elem, { throwOnError: false });
+                });
+                document.querySelectorAll('[data-katex-display]').forEach(elem => {
+                    katex.render(elem.getAttribute('data-katex-display'), elem, { displayMode: true, throwOnError: false });
+                });
+            }
+            renderMath();
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+
+            const circleRadiusSlider = document.getElementById('circle-radius-slider');
+            const circleVisual = document.getElementById('circle-visual');
+            const circleRadiusLabel = document.getElementById('circle-radius-label');
+            if (circleRadiusSlider) {
+                circleRadiusSlider.addEventListener('input', () => {
+                    const r = circleRadiusSlider.value;
+                    circleVisual.style.width = r + 'px';
+                    circleVisual.style.height = r + 'px';
+                    circleRadiusLabel.textContent = r + 'px';
+                });
+            }
+
+            const shapeMorph = document.getElementById('shape-morph');
+            if (shapeMorph) {
+                const morphAnimation = [
+                    { transform: 'scaleX(1) scaleY(1)' },
+                    { transform: 'scaleX(1.5) scaleY(0.8)' },
+                    { transform: 'scaleX(1) scaleY(1)' }
+                ];
+                const morphTiming = {
+                    duration: 2000,
+                    iterations: Infinity,
+                    easing: 'ease-in-out',
+                    direction: 'alternate'
+                };
+                shapeMorph.animate(morphAnimation, morphTiming);
+            }
+
+            const definitionCanvas = document.getElementById('ellipse-definition-canvas');
+            if (definitionCanvas) {
+                const ctx = definitionCanvas.getContext('2d');
+                let angle = 0;
+                const a = 130, b = 70;
+                const w = definitionCanvas.width = 300;
+                const h = definitionCanvas.height = 200;
+                const c = Math.sqrt(a*a - b*b);
+                
+                function drawDefinition() {
+                    ctx.clearRect(0, 0, w, h);
+                    const x = w/2 + a * Math.cos(angle);
+                    const y = h/2 + b * Math.sin(angle);
+
+                    ctx.strokeStyle = '#94a3b8';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for(let i=0; i < 2 * Math.PI; i+= 0.01) {
+                        const plotX = w/2 + a * Math.cos(i);
+                        const plotY = h/2 + b * Math.sin(i);
+                        if (i === 0) ctx.moveTo(plotX, plotY);
+                        else ctx.lineTo(plotX, plotY);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+
+                    const f1x = w/2 - c;
+                    const f2x = w/2 + c;
+                    const fy = h/2;
+                    
+                    ctx.beginPath();
+                    ctx.arc(f1x, fy, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#f87171';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(f2x, fy, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#60a5fa';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(f1x, fy);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = '#f87171';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(f2x, fy);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = '#60a5fa';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#334155';
+                    ctx.fill();
+                    
+                    angle += 0.02;
+                    requestAnimationFrame(drawDefinition);
+                }
+                drawDefinition();
+            }
+
+            const sliderE = document.getElementById('slider-e');
+            const sliderA = document.getElementById('slider-a');
+            const sliderB = document.getElementById('slider-b');
+            const labelE = document.getElementById('label-e');
+            const labelA = document.getElementById('label-a');
+            const labelB = document.getElementById('label-b');
+            const valueC = document.getElementById('value-c');
+            const ctxChart = document.getElementById('ellipse-chart').getContext('2d');
+            let ellipseChart;
+            
+            const initialA = 5;
+
+            function generateEllipseData(a, b) {
+                const data = { ellipse: [], foci: [] };
+                for (let i = 0; i <= 360; i++) {
+                    const angle = i * Math.PI / 180;
+                    data.ellipse.push({ x: a * Math.cos(angle), y: b * Math.sin(angle) });
+                }
+                if (a >= b) {
+                    const c = Math.sqrt(Math.max(0, a * a - b * b));
+                    data.foci.push({x: c, y: 0}, {x: -c, y: 0});
+                } else {
+                     const c = Math.sqrt(Math.max(0, b * b - a * a));
+                     data.foci.push({x: 0, y: c}, {x: 0, y: -c});
+                }
+                return data;
+            }
+
+            function createChart(a, b) {
+                const data = generateEllipseData(a, b);
+                const maxVal = Math.max(a, b, 1) * 1.2;
+                ellipseChart = new Chart(ctxChart, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: '타원', data: data.ellipse, showLine: true,
+                            borderColor: '#0d9488', backgroundColor: 'transparent',
+                            borderWidth: 3, pointRadius: 0, tension: 0.1,
+                        }, {
+                            label: '초점', data: data.foci,
+                            backgroundColor: '#ef4444', pointRadius: 5, pointStyle: 'circle'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        scales: {
+                            x: { type: 'linear', position: 'bottom', min: -maxVal, max: maxVal, grid: { color: '#e2e8f0' } },
+                            y: { min: -maxVal, max: maxVal, grid: { color: '#e2e8f0' } }
+                        }
+                    }
+                });
+            }
+
+            function updateFromEccentricity() {
+                const e = parseFloat(sliderE.value);
+                const a = initialA;
+                const b = a * Math.sqrt(1 - e * e);
+                
+                sliderA.value = a.toFixed(1);
+                sliderB.value = b.toFixed(1);
+
+                updateChart(a, b, e);
+            }
+
+            function updateFromAB() {
+                const a = parseFloat(sliderA.value);
+                const b = parseFloat(sliderB.value);
+                
+                let e = 0;
+                if (a > 0) {
+                    e = Math.sqrt(1 - (b*b) / (a*a));
+                }
+                
+                sliderE.value = e.toFixed(2);
+                updateChart(a, b, e);
+            }
+
+            function updateChart(a, b, e) {
+                labelE.textContent = e.toFixed(2);
+                labelA.textContent = a.toFixed(2);
+                labelB.textContent = b.toFixed(2);
+
+                const c = a * e;
+                valueC.textContent = c.toFixed(2);
+                
+                const data = generateEllipseData(a, b);
+                ellipseChart.data.datasets[0].data = data.ellipse;
+                ellipseChart.data.datasets[1].data = data.foci;
+                
+                const maxVal = Math.max(a, b, c) * 1.2;
+                ellipseChart.options.scales.x.min = -maxVal;
+                ellipseChart.options.scales.x.max = maxVal;
+                ellipseChart.options.scales.y.min = -maxVal;
+                ellipseChart.options.scales.y.max = maxVal;
+                ellipseChart.update();
+            }
+
+            if (sliderE) {
+                sliderE.addEventListener('input', updateFromEccentricity);
+                sliderA.addEventListener('input', updateFromAB);
+                sliderB.addEventListener('input', updateFromAB);
+                
+                createChart(initialA, initialA);
+                updateFromEccentricity();
+            }
+        });
+    </script>
+</body>
+</html>
